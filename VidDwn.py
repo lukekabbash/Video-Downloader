@@ -602,7 +602,7 @@ class YouTubeDownloader(QtWidgets.QMainWindow):
 
         # Run the download in a separate thread to keep UI responsive
         self.thread = QtCore.QThread()
-        self.worker = DownloadWorker(YoutubeDL(ydl_opts), url, format_choice)
+        self.worker = DownloadWorker(YoutubeDL(ydl_opts), url, format_choice, expected_filepath)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.progress.connect(self.update_progress)
@@ -712,11 +712,12 @@ class DownloadWorker(QtCore.QObject):
     finished = QtCore.pyqtSignal()
     download_complete = QtCore.pyqtSignal(str)  # Signal to emit filepath
 
-    def __init__(self, downloader, url, format_choice):
+    def __init__(self, downloader, url, format_choice, final_filepath):
         super().__init__()
         self.downloader = downloader
         self.url = url
         self.format_choice = format_choice
+        self.final_filepath = final_filepath # Store expected filepath.
 
     def run(self):
         try:
@@ -730,12 +731,10 @@ class DownloadWorker(QtCore.QObject):
                         percent = 0
                     self.progress.emit(percent)
                 elif d['status'] == 'finished':
-                    # Depending on yt_dlp version, 'filepath' or 'filename' might be available
-                    filepath = d.get('filepath') or d.get('filename')
-                    if filepath:
-                        # Convert to absolute path
-                        filepath = os.path.abspath(filepath)
-                        self.download_complete.emit(filepath)
+                    # Instead of d.get('filepath') or d.get('filename'), we emit the final filepath
+                    # We are now emitting the final file path, and not the raw video/audio files.
+                    self.download_complete.emit(self.final_filepath)
+
 
             self.downloader.add_progress_hook(progress_hook)
             self.downloader.download([self.url])
