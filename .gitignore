@@ -1,2 +1,4 @@
 download_history.json
-downloader.log 
+downloader.log
+ffmpeg/
+ffmpeg_temp/
